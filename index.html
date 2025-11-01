@@ -1307,6 +1307,23 @@
       });
 
       // Email Form Submission
+
+      // Wait for Supabase client to be initialized
+      async function waitForSupabase() {
+        return new Promise((resolve, reject) => {
+          const start = Date.now();
+          const interval = setInterval(() => {
+            if (window.supabase) {
+              clearInterval(interval);
+              resolve(window.supabase);
+            } else if (Date.now() - start > 5000) {
+              clearInterval(interval);
+              reject("Supabase not initialized in time");
+            }
+          }, 100);
+        });
+      }
+
       document
         .getElementById("emailForm")
         .addEventListener("submit", async function (e) {
@@ -1359,7 +1376,8 @@
 
           try {
             // Insert data into Supabase waitlist table
-            const { error } = await window.supabase
+            const supabase = await waitForSupabase();
+            const { error } = await supabase
               .from("waitlist")
               .insert([{ restaurant, email, phone }]);
 
