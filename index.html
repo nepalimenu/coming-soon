@@ -868,6 +868,18 @@
       }
     </style>
   </head>
+  <script>
+    window.SUPABASE_URL = "%VITE_SUPABASE_URL%";
+    window.SUPABASE_ANON_KEY = "%VITE_SUPABASE_ANON_KEY%";
+  </script>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+    const SUPABASE_URL = window.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
   <body>
     <!-- Background -->
     <div class="grid-background"></div>
@@ -1297,7 +1309,7 @@
       // Email Form Submission
       document
         .getElementById("emailForm")
-        .addEventListener("submit", function (e) {
+        .addEventListener("submit", async function (e) {
           e.preventDefault();
 
           // Validate all fields
@@ -1345,17 +1357,19 @@
           submitBtn.innerHTML =
             '<i class="bi bi-hourglass-split"></i> Submitting...';
 
-          // Simulate API call (replace with your actual API endpoint)
-          setTimeout(() => {
-            // Here you would typically send this data to your backend
-            const waitlistData = {
-              restaurant: restaurant,
-              email: email,
-              phone: phone,
-              timestamp: new Date().toISOString(),
-            };
+          try {
+            // Insert data into Supabase waitlist table
+            const { error } = await window.supabase
+              .from("waitlist")
+              .insert([{ restaurant, email, phone }]);
 
-            console.log("Waitlist submission:", waitlistData);
+            if (error) throw error;
+
+            console.log("✅ Waitlist submission added:", {
+              restaurant,
+              email,
+              phone,
+            });
 
             // Show success message
             document.getElementById("successMessage").classList.add("show");
@@ -1395,7 +1409,19 @@
                 .getElementById("successMessage")
                 .classList.remove("show");
             }, 8000);
-          }, 1500);
+          } catch (err) {
+            console.error("Supabase insert failed:", err);
+            errorAlertText.textContent =
+              "Could not save your data. Please try again later.";
+            errorAlert.classList.add("show");
+            setTimeout(() => {
+              errorAlert.classList.remove("show");
+            }, 5000);
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML =
+              '<i class="bi bi-send-fill"></i> Join Waitlist';
+          }
         });
 
       // Add pulse animation keyframe
